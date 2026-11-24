@@ -27,7 +27,11 @@ def main():
     # Cabecalho
     topo = ctk.CTkFrame(app, fg_color="transparent")
     topo.pack(fill="x", padx=28, pady=(24, 4))
-    ctk.CTkLabel(topo, text="Voz Livre", font=(F + " Semibold", 30)).pack(anchor="w")
+    linha_topo = ctk.CTkFrame(topo, fg_color="transparent")
+    linha_topo.pack(fill="x")
+    ctk.CTkLabel(linha_topo, text="Voz Livre", font=(F + " Semibold", 30)).pack(side="left")
+    ctk.CTkButton(linha_topo, text="ⓘ  Sobre", width=90, height=30, corner_radius=8, fg_color=CHIP,
+                  hover_color="#383846", command=ditado.abrir_sobre).pack(side="right")
     ctk.CTkLabel(topo, text="Fale em vez de digitar. Ouça em vez de ler.",
                  font=(F, 13), text_color=CINZA).pack(anchor="w")
 

@@ -4,6 +4,7 @@
 # Licenca MIT - https://github.com/rodrigoranda/voz-livre
 import os, sys, json, time, threading, io, wave, logging, subprocess
 
+VERSAO = "1.2.0"
 BASE = os.path.dirname(os.path.abspath(__file__))
 CFG = os.path.join(BASE, "config.json")
 PADRAO = {"tecla": "ctrl+windows", "motor": "pc", "tecla_ler": "ctrl+shift+l", "voz": "pt-BR-FranciscaNeural",
@@ -798,6 +799,10 @@ def abrir_config(*_):
     subprocess.Popen([PYTHONW, os.path.join(BASE, "config_ui.py")])
 
 
+def abrir_sobre(*_):
+    subprocess.Popen([PYTHONW, os.path.join(BASE, "sobre.py")])
+
+
 def inicia_com_windows(*_):
     return os.path.exists(ATALHO_INICIAR)
 
@@ -862,6 +867,7 @@ def main():
         pystray.MenuItem("Iniciar com o Windows", alternar_iniciar, checked=inicia_com_windows),
         pystray.MenuItem("Abrir pasta", lambda *_: os.startfile(BASE)),
         pystray.Menu.SEPARATOR,
+        pystray.MenuItem(f"Sobre o Voz Livre (v{VERSAO})", abrir_sobre),
         pystray.MenuItem("Sair", sair),
     )
     icone = pystray.Icon("voz_livre", desenhar(CORES["carregando"]), "Voz Livre - carregando...", menu)
