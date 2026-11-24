@@ -1,10 +1,10 @@
-# Voz Livre - ditado por voz para Windows: segure a tecla, fale, solte e o texto aparece onde o cursor estiver.
+﻿# Voz Livre - ditado por voz para Windows: segure a tecla, fale, solte e o texto aparece onde o cursor estiver.
 # Abrir:      pythonw voz_livre.py   (ou o atalho criado pelo instalar.bat)
 # Configurar: icone na bandeja (perto do relogio) > "Configurações"
 # Licenca MIT - https://github.com/rodrigoranda/voz-livre
 import os, sys, json, time, threading, io, wave, logging, subprocess
 
-VERSAO = "1.2.0"
+VERSAO = "1.2.1"
 BASE = os.path.dirname(os.path.abspath(__file__))
 CFG = os.path.join(BASE, "config.json")
 PADRAO = {"tecla": "ctrl+windows", "motor": "pc", "tecla_ler": "ctrl+shift+l", "voz": "pt-BR-FranciscaNeural",

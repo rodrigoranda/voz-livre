@@ -41,7 +41,7 @@ Todas as teclas podem ser trocadas nas Configurações.
 
 O **Voz Livre** nasceu em **Fernando de Noronha**, um arquipélago vulcânico no meio do Oceano Atlântico, a cerca de 545 km de Recife. São 21 ilhas e ilhotas, a maior parte protegida pelo **Parque Nacional Marinho** e reconhecida pela **UNESCO como Patrimônio Natural da Humanidade**. É a terra da **Baía do Sancho**, várias vezes eleita a praia mais bonita do mundo, e dos golfinhos-rotadores da Baía dos Golfinhos.
 
-Em uma ilha, a internet nem sempre colabora. Por isso o app foi pensado para **funcionar também sem conexão**, rodando direto no computador. Ele foi criado por **Rodrigo Morais**, morador da ilha que trabalha com tecnologia há mais de 40 anos, para facilitar o dia a dia de quem atende clientes, turistas e vizinhos pelo WhatsApp e não quer pagar assinatura para ditar texto.
+Em uma ilha, a internet nem sempre colabora. Por isso o app foi pensado para **funcionar também sem conexão**, rodando direto no computador. Ele foi criado por **Rodrigo Morais**, morador da ilha há mais de 40 anos que sempre trabalhou com tecnologia, para facilitar o dia a dia de quem atende clientes, turistas e vizinhos pelo WhatsApp e não quer pagar assinatura para ditar texto.
 
 A ideia é simples: uma ferramenta boa, gratuita e aberta, feita no Brasil e em português, que qualquer pessoa pode usar, estudar e melhorar.
 
@@ -265,6 +265,6 @@ Desenvolvido por **Rodrigo Morais**, em Fernando de Noronha 🏝️, com a ajuda
 
 **Install:** Python 3.10+, then run `instalar.bat`. Get a free Groq key at [console.groq.com](https://console.groq.com) for the cloud and AI features. The UI is in Portuguese; dictation language is currently fixed to Portuguese (PRs welcome!).
 
-**About:** made in **Fernando de Noronha**, a volcanic archipelago and UNESCO World Heritage Site off the coast of Brazil, by a local who has worked with technology on the island for over 40 years. Island internet is unreliable, which is why Voz Livre can run fully offline.
+**About:** made in **Fernando de Noronha**, a volcanic archipelago and UNESCO World Heritage Site off the coast of Brazil, by a tech-savvy local who has lived on the island for over 40 years. Island internet is unreliable, which is why Voz Livre can run fully offline.
 
 License: MIT.

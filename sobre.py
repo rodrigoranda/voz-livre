@@ -22,8 +22,8 @@ TEXTO_NORONHA = (
     "Natural da Humanidade. É a terra da Baía do Sancho, várias vezes eleita a praia "
     "mais bonita do mundo, e dos golfinhos-rotadores da Baía dos Golfinhos.\n\n"
     "Em uma ilha, a internet nem sempre colabora. Por isso o app foi pensado para "
-    "funcionar também sem conexão. Ele foi feito por um morador da ilha que trabalha "
-    "com tecnologia há mais de 40 anos, para facilitar o dia a dia de quem atende "
+    "funcionar também sem conexão. Ele foi feito por um morador da ilha há mais de 40 "
+    "anos, que sempre trabalhou com tecnologia, para facilitar o dia a dia de quem atende "
     "clientes, turistas e vizinhos pelo WhatsApp."
 )
 
