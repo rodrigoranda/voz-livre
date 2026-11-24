@@ -91,14 +91,14 @@ Abra clicando no ícone perto do relógio → **Configurações** (ou clicando d
 Lá você troca as teclas, escolhe o modelo, a voz da leitura, cola a chave da Groq, liga o "iniciar com o Windows" e mais.
 
 **Pílula flutuante**
-Aparece embaixo da tela enquanto ele trabalha, sem roubar o foco da janela em que você está digitando:
+Aparece enquanto ele trabalha, sem roubar o foco da janela em que você está digitando. Tem bordas lisas e sombra suave, e é **sua**: arraste para onde quiser com o mouse e ajuste **tamanho** e **opacidade** em Configurações → *Pílula flutuante* (as mudanças aparecem na hora). Para posicionar com calma, use o ícone → **Posicionar pílula**.
 - 🔴 **Ouvindo**: a onda acompanha sua voz
 - 🟡 **Escrevendo**: transcrevendo / pensando
 - 🔵 **Lendo**: lendo em voz alta
 - 🟣 **Comando**: ouvindo um comando de IA (F8)
 
 **Ícone na bandeja**
-Clique com o botão direito para: Configurações, Histórico, Editar dicionário, Iniciar com o Windows, Sair.
+Clique com o botão direito para: Configurações, Histórico, Posicionar pílula, Editar dicionário, Iniciar com o Windows, Sair.
 
 </td>
 </tr>
@@ -245,7 +245,8 @@ Desenvolvido por **Rodrigo Morais**, em Fernando de Noronha 🏝️, com a ajuda
 - **Runs locally** with [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (Whisper large-v3-turbo, ~0.5 s for 20 s of speech on an NVIDIA GPU), or in the cloud via [Groq](https://groq.com) (0 MB download). Each one falls back to the other.
 - **AI command (F8)**: select text and say what to do ("make it formal", "translate to English"), or generate new text from a spoken request.
 - **Read aloud (Ctrl+Shift+L)**: translates the selected text to Portuguese and reads it with Microsoft Edge neural voices.
-- Spoken punctuation, "send message" (presses Enter), "delete that", custom dictionary, history, pre-roll buffer so the first word isn't cut, floating overlay, modern settings window.
+- Spoken punctuation, "send message" (presses Enter), "delete that", custom dictionary, history, pre-roll buffer so the first word isn't cut, modern settings window.
+- Floating overlay drawn with real per-pixel transparency (smooth edges, soft shadow): draggable, with adjustable size and opacity.
 
 **Install:** Python 3.10+, then run `instalar.bat`. Get a free Groq key at [console.groq.com](https://console.groq.com) for the cloud and AI features. The UI is in Portuguese; dictation language is currently fixed to Portuguese (PRs welcome!).
 

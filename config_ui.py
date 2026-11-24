@@ -1,5 +1,5 @@
 # Tela de configuracoes do Voz Livre (visual moderno com customtkinter)
-import os, sys, threading
+import os, sys, threading, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import customtkinter as ctk
 import keyboard
@@ -145,6 +145,43 @@ def main():
              "\"apaga isso\" sozinho  →  apaga o último ditado")
     ctk.CTkLabel(f6, text=dicas, font=("Consolas", 12), justify="left", text_color="#c9c9d6").pack(anchor="w", padx=18, pady=(6, 16))
 
+    # Pilula flutuante (muda ao vivo)
+    fp = card("Pílula flutuante", "Arraste a pílula com o mouse para onde quiser. "
+                                  "Os controles abaixo mudam na hora.")
+
+    def ajustar_pilula(**valores):
+        atual = ditado.ler_cfg()
+        atual.update(valores)
+        atual["pilula_mostrar_ate"] = time.time() + 4      # mostra para voce ver a mudanca
+        ditado.salvar_cfg(atual)
+
+    def slider(rotulo, chave, minimo, maximo, padrao):
+        linha = ctk.CTkFrame(fp, fg_color="transparent")
+        linha.pack(fill="x", padx=18, pady=(8, 0))
+        ctk.CTkLabel(linha, text=rotulo, font=(F, 12), text_color=CINZA, width=110, anchor="w").pack(side="left")
+        valor = ctk.CTkLabel(linha, text="", font=(F, 12), width=44)
+        valor.pack(side="right")
+        s = ctk.CTkSlider(linha, from_=minimo, to=maximo, progress_color=ROXO, button_color=ROXO,
+                          button_hover_color=ROXO_HOVER)
+        s.set(float(c.get(chave, padrao)) * 100)
+        valor.configure(text=f"{int(s.get())}%")
+
+        def mudou(v):
+            valor.configure(text=f"{int(v)}%")
+            ajustar_pilula(**{chave: round(v / 100, 2)})
+        s.configure(command=mudou)
+        s.pack(side="left", fill="x", expand=True, padx=8)
+    slider("Tamanho", "pilula_escala", 60, 200, 1.0)
+    slider("Opacidade", "pilula_opacidade", 30, 100, 0.95)
+
+    botoes = ctk.CTkFrame(fp, fg_color="transparent")
+    botoes.pack(fill="x", padx=18, pady=(12, 16))
+    ctk.CTkButton(botoes, text="Mostrar para posicionar", height=34, corner_radius=8, fg_color=ROXO,
+                  hover_color=ROXO_HOVER, command=ditado.mostrar_pilula_para_posicionar).pack(side="left")
+    ctk.CTkButton(botoes, text="Voltar ao padrão", height=34, corner_radius=8, fg_color=CHIP,
+                  hover_color="#383846", command=lambda: ajustar_pilula(pilula_x=None, pilula_y=None,
+                  pilula_escala=1.0, pilula_opacidade=0.95)).pack(side="right")
+
     # Sobre voce (contexto para a IA)
     f_sobre = card("Sobre você (opcional)", "Ajuda a IA do Comando a escrever do seu jeito. Ex.: \"técnico de TI, atendo clientes pelo WhatsApp\".")
     sobre = ctk.CTkEntry(f_sobre, height=36, corner_radius=8, fg_color=CHIP, border_width=0,
@@ -162,6 +199,8 @@ def main():
     sw.pack(anchor="w", padx=18, pady=16)
 
     def salvar():
+        # mantem o que a pilula salvou enquanto esta tela estava aberta (posicao, tamanho...)
+        c.update({k: v for k, v in ditado.ler_cfg().items() if k.startswith("pilula_")})
         c["tecla"], c["tecla_ler"], c["tecla_colar"], c["tecla_comando"] = \
             tecla.get(), tecla_ler.get(), tecla_colar.get(), tecla_cmd.get()
         c["motor"] = motores[seg.get()]

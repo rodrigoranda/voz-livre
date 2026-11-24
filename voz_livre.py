@@ -35,8 +35,16 @@ def ler_cfg():
 
 
 def salvar_cfg(c):
-    with open(CFG, "w", encoding="utf-8") as f:
+    # grava num arquivo temporario e troca de uma vez (ninguem le o arquivo pela metade)
+    tmp = CFG + f".{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(c, f, ensure_ascii=False, indent=2)
+    for _ in range(5):
+        try:
+            os.replace(tmp, CFG)
+            return
+        except PermissionError:
+            time.sleep(0.05)
 
 
 
@@ -419,73 +427,211 @@ def bip(nome):
 
 
 def pilula():
-    """Janela flutuante (sem roubar o foco) que aparece enquanto grava, processa ou le."""
-    import tkinter as tk, ctypes, math, collections
-    from PIL import Image, ImageDraw, ImageTk, ImageFont
-    W, H, S = 260, 52, 3
-    CHAVE = "#020202"
-    root = tk.Tk()
-    root.overrideredirect(True)
-    root.attributes("-topmost", True)
-    root.config(bg=CHAVE)
-    root.attributes("-transparentcolor", CHAVE)
-    sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
-    root.geometry(f"{W}x{H}+{(sw - W) // 2}+{sh - H - 80}")
-    lbl = tk.Label(root, bg=CHAVE, bd=0, highlightthickness=0)
-    lbl.pack()
-    root.update_idletasks()
-    u32 = ctypes.windll.user32
-    hwnd = u32.GetParent(root.winfo_id())
-    ex = u32.GetWindowLongW(hwnd, -20)
-    u32.SetWindowLongW(hwnd, -20, ex | 0x08000000 | 0x80 | 0x20 | 0x80000)  # nao ativa, sem barra, clique atravessa
-    u32.ShowWindow(hwnd, 0)
+    """Janela flutuante feita direto na API do Windows (sem Tkinter):
+    transparencia real por pixel (bordas lisas + sombra), nao rouba o foco,
+    e pode ser arrastada como uma janela normal. Tamanho, opacidade e posicao ficam no config.json."""
+    import ctypes, ctypes.wintypes as wt, math, collections
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)     # nitido em telas com zoom (125%, 150%...)
+    except Exception:
+        pass
+    u32 = ctypes.WinDLL("user32", use_last_error=True)
+    g32 = ctypes.WinDLL("gdi32", use_last_error=True)
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    LRESULT = ctypes.c_ssize_t
+    WNDPROC = ctypes.WINFUNCTYPE(LRESULT, wt.HWND, wt.UINT, wt.WPARAM, wt.LPARAM)
+
+    class WNDCLASSW(ctypes.Structure):
+        _fields_ = [("style", wt.UINT), ("lpfnWndProc", WNDPROC), ("cbClsExtra", ctypes.c_int),
+                    ("cbWndExtra", ctypes.c_int), ("hInstance", wt.HINSTANCE), ("hIcon", wt.HICON),
+                    ("hCursor", wt.HANDLE), ("hbrBackground", wt.HBRUSH), ("lpszMenuName", wt.LPCWSTR),
+                    ("lpszClassName", wt.LPCWSTR)]
+
+    class BLEND(ctypes.Structure):
+        _fields_ = [("op", ctypes.c_ubyte), ("flags", ctypes.c_ubyte), ("alpha", ctypes.c_ubyte), ("fmt", ctypes.c_ubyte)]
+
+    class BMIH(ctypes.Structure):
+        _fields_ = [("biSize", wt.DWORD), ("biWidth", wt.LONG), ("biHeight", wt.LONG), ("biPlanes", wt.WORD),
+                    ("biBitCount", wt.WORD), ("biCompression", wt.DWORD), ("biSizeImage", wt.DWORD),
+                    ("biXPelsPerMeter", wt.LONG), ("biYPelsPerMeter", wt.LONG), ("biClrUsed", wt.DWORD),
+                    ("biClrImportant", wt.DWORD)]
+
+    u32.DefWindowProcW.restype = LRESULT
+    u32.DefWindowProcW.argtypes = [wt.HWND, wt.UINT, wt.WPARAM, wt.LPARAM]
+    u32.RegisterClassW.argtypes = [ctypes.POINTER(WNDCLASSW)]
+    u32.CreateWindowExW.restype = wt.HWND
+    u32.CreateWindowExW.argtypes = [wt.DWORD, wt.LPCWSTR, wt.LPCWSTR, wt.DWORD, ctypes.c_int, ctypes.c_int,
+                                    ctypes.c_int, ctypes.c_int, wt.HWND, wt.HMENU, wt.HINSTANCE, wt.LPVOID]
+    u32.LoadCursorW.restype = wt.HANDLE
+    u32.LoadCursorW.argtypes = [wt.HINSTANCE, ctypes.c_void_p]
+    u32.ShowWindow.argtypes = [wt.HWND, ctypes.c_int]
+    u32.GetWindowRect.argtypes = [wt.HWND, ctypes.POINTER(wt.RECT)]
+    u32.PeekMessageW.argtypes = [ctypes.POINTER(wt.MSG), wt.HWND, wt.UINT, wt.UINT, wt.UINT]
+    u32.TranslateMessage.argtypes = [ctypes.POINTER(wt.MSG)]
+    u32.DispatchMessageW.argtypes = [ctypes.POINTER(wt.MSG)]
+    u32.DestroyWindow.argtypes = [wt.HWND]
+    u32.GetDC.restype = wt.HDC
+    u32.GetDC.argtypes = [wt.HWND]
+    u32.ReleaseDC.argtypes = [wt.HWND, wt.HDC]
+    u32.UpdateLayeredWindow.argtypes = [wt.HWND, wt.HDC, ctypes.POINTER(wt.POINT), ctypes.POINTER(wt.SIZE), wt.HDC,
+                                        ctypes.POINTER(wt.POINT), wt.DWORD, ctypes.POINTER(BLEND), wt.DWORD]
+    g32.CreateDIBSection.restype = wt.HBITMAP
+    g32.CreateDIBSection.argtypes = [wt.HDC, ctypes.c_void_p, wt.UINT, ctypes.POINTER(ctypes.c_void_p),
+                                     wt.HANDLE, wt.DWORD]
+    g32.CreateCompatibleDC.restype = wt.HDC
+    g32.CreateCompatibleDC.argtypes = [wt.HDC]
+    g32.SelectObject.restype = wt.HGDIOBJ
+    g32.SelectObject.argtypes = [wt.HDC, wt.HGDIOBJ]
+    g32.DeleteObject.argtypes = [wt.HGDIOBJ]
+    g32.DeleteDC.argtypes = [wt.HDC]
+    k32.GetModuleHandleW.restype = wt.HMODULE
+    k32.GetModuleHandleW.argtypes = [wt.LPCWSTR]
+
+    dpi = u32.GetDpiForSystem() / 96 if hasattr(u32, "GetDpiForSystem") else 1.0
+    sw, sh = u32.GetSystemMetrics(0), u32.GetSystemMetrics(1)
+    BW, BH, M, S = 260, 52, 14, 3            # pilula base, margem da sombra, supersample
+    atual = {"W": 0, "H": 0, "x": 0, "y": 0, "alpha": 242, "cfg_em": 0, "mostrar_ate": 0}
+    hwnd_ref = [None]
+
+    def salvar_posicao():
+        r = wt.RECT()
+        u32.GetWindowRect(hwnd_ref[0], ctypes.byref(r))
+        atual.update(x=r.left, y=r.top)
+        c = ler_cfg()
+        c["pilula_x"], c["pilula_y"] = r.left, r.top
+        salvar_cfg(c)
+
+    def wndproc(hwnd, msg, wparam, lparam):
+        if msg == 0x0084:                     # WM_NCHITTEST: a pilula inteira serve de "barra de titulo" (arrastar)
+            return 2                          # HTCAPTION
+        if msg == 0x0021:                     # WM_MOUSEACTIVATE: clicar nao rouba o foco
+            return 3                          # MA_NOACTIVATE
+        if msg in (0x00A3, 0x00A4, 0x00A5, 0x007B):   # duplo clique / botao direito: nao faz nada
+            return 0
+        if msg == 0x0232:                     # WM_EXITSIZEMOVE: terminou de arrastar
+            salvar_posicao()
+            return 0
+        return u32.DefWindowProcW(hwnd, msg, wparam, lparam)
+    proc = WNDPROC(wndproc)                   # guardar referencia (senao o Python apaga)
+
+    hinst = k32.GetModuleHandleW(None)
+    wc = WNDCLASSW(0, proc, 0, 0, hinst, None, u32.LoadCursorW(None, ctypes.c_void_p(32646)), None, None,
+                   "PilulaVozLivre")             # 32646 = cursor de mover
+    u32.RegisterClassW(ctypes.byref(wc))
+    WS_EX = 0x00000008 | 0x00080000 | 0x00000080 | 0x08000000   # topmost, layered, toolwindow, noactivate
+    hwnd = u32.CreateWindowExW(WS_EX, "PilulaVozLivre", "Pilula", 0x80000000, 0, 0, 1, 1, None, None, hinst, None)
+    hwnd_ref[0] = hwnd
+
+    def mostrar_imagem(img):
+        """img: RGBA no tamanho da janela. Envia ao Windows com alfa por pixel."""
+        w, h = img.size
+        a = np.asarray(img, dtype=np.float32)
+        a[..., :3] *= a[..., 3:4] / 255.0                  # alfa pre-multiplicado
+        bgra = np.ascontiguousarray(a[..., [2, 1, 0, 3]]).astype(np.uint8).tobytes()
+        bmi = BMIH(ctypes.sizeof(BMIH), w, -h, 1, 32, 0, 0, 0, 0, 0, 0)
+        bits = ctypes.c_void_p()
+        tela = u32.GetDC(None)
+        mem = g32.CreateCompatibleDC(tela)
+        bmp = g32.CreateDIBSection(tela, ctypes.byref(bmi), 0, ctypes.byref(bits), None, 0)
+        ctypes.memmove(bits, bgra, len(bgra))
+        antigo = g32.SelectObject(mem, bmp)
+        ok = u32.UpdateLayeredWindow(hwnd, tela, ctypes.byref(wt.POINT(atual["x"], atual["y"])),
+                                     ctypes.byref(wt.SIZE(w, h)), mem, ctypes.byref(wt.POINT(0, 0)), 0,
+                                     ctypes.byref(BLEND(0, 0, atual["alpha"], 1)), 2)
+        if not ok and not atual.get("avisou"):
+            atual["avisou"] = True
+            logging.warning("Pilula: UpdateLayeredWindow falhou (erro %s)", ctypes.get_last_error())
+        g32.SelectObject(mem, antigo)
+        g32.DeleteObject(bmp)
+        g32.DeleteDC(mem)
+        u32.ReleaseDC(None, tela)
+
     try:
         fonte = ImageFont.truetype("seguisb.ttf", 15 * S)
     except Exception:
         fonte = ImageFont.truetype("segoeui.ttf", 15 * S)
-    hist = collections.deque([0.0] * 20, maxlen=20)
-    t0, vis, foto = time.time(), [False], [None]
     textos = {"gravando": "Ouvindo", "pensando": "Escrevendo", "lendo": "Lendo", "comando": "Comando"}
 
-    def tick():
-        if sair_evt.is_set():
-            root.destroy(); return
+    # sombra suave: calculada uma vez so (o desenho e sempre no tamanho base e depois reduzido)
+    CW, CH = (BW + 2 * M) * S, (BH + 2 * M) * S
+    sombra = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
+    ImageDraw.Draw(sombra).rounded_rectangle((M * S, (M + 3) * S, (M + BW) * S, (M + BH + 3) * S),
+                                             radius=(BH // 2) * S, fill=(0, 0, 0, 90))
+    sombra = sombra.filter(ImageFilter.GaussianBlur(3 * S))
+    sombra.putalpha(sombra.getchannel("A").point(lambda v: 0 if v < 4 else v))   # sem "nevoa" no fundo
+
+    def aplicar_cfg():
+        c = ler_cfg()
+        esc = max(0.6, min(2.0, float(c.get("pilula_escala", 1.0)))) * dpi
+        W, H = int((BW + 2 * M) * esc), int((BH + 2 * M) * esc)
+        x, y = c.get("pilula_x"), c.get("pilula_y")
+        if x is None or y is None:
+            x, y = (sw - W) // 2, sh - H - int(70 * dpi)        # padrao: embaixo, no meio
+        x, y = max(-M, min(sw - 60, int(x))), max(-M, min(sh - 30, int(y)))   # nunca some da tela
+        atual.update(W=W, H=H, x=x, y=y)
+        atual["alpha"] = int(255 * max(0.3, min(1.0, float(c.get("pilula_opacidade", 0.95)))))
+        atual["mostrar_ate"] = float(c.get("pilula_mostrar_ate", 0))
+
+    hist = collections.deque([0.0] * 20, maxlen=20)
+
+    def desenhar_quadro(e, t):
+        texto = textos.get(e, "Arraste-me")
+        cor = CORES[e] if e in textos else CORES["pronto"]
+        img = sombra.copy()
+        d = ImageDraw.Draw(img)
+        ox, oy = M * S, M * S
+        d.rounded_rectangle((ox, oy, ox + BW * S, oy + BH * S), radius=(BH // 2) * S,
+                            fill=(20, 20, 26, 255), outline=(62, 62, 76, 255), width=S)
+        cy = oy + BH * S / 2
+        cx = ox + 26 * S
+        r = (5.5 + 1.5 * math.sin(t * 6)) * S
+        d.ellipse((cx - r * 1.9, cy - r * 1.9, cx + r * 1.9, cy + r * 1.9), fill=tuple(c // 4 for c in cor) + (255,))
+        d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=cor + (255,))
+        d.text((ox + 46 * S, cy), texto, font=fonte, fill=(240, 240, 246, 255), anchor="lm")
+        n, bw, gap, x0 = 20, 3 * S, 2 * S, ox + 142 * S
+        for i in range(n):
+            if e in ("gravando", "comando"):
+                v = hist[i]
+            elif e == "lendo":
+                v = 0.35 + 0.3 * math.sin(t * 7 + i * 0.6) * math.sin(t * 2.3 + i * 0.25)
+            elif e in textos:
+                v = 0.12 + 0.12 * (1 + math.sin(t * 9 - i * 0.45)) / 2
+            else:                                       # modo posicionar
+                v = 0.2 + 0.15 * math.sin(t * 3 + i * 0.3)
+            h = max(3 * S, v * 30 * S)
+            x = x0 + i * (bw + gap)
+            d.rounded_rectangle((x, cy - h / 2, x + bw, cy + h / 2), radius=bw // 2,
+                                fill=((240, 240, 246) if e in ("gravando", "comando") else cor) + (255,))
+        # reduz com alfa pre-multiplicado (RGBa) para as bordas ficarem lisas, sem halo escuro
+        return img.convert("RGBa").resize((atual["W"], atual["H"]), Image.LANCZOS).convert("RGBA")
+
+    def vazio():
+        return Image.new("RGBA", (max(1, atual["W"]), max(1, atual["H"])), (0, 0, 0, 0))
+
+    aplicar_cfg()
+    mostrar_imagem(vazio())
+    u32.ShowWindow(hwnd, 4)                   # SW_SHOWNOACTIVATE (fica "visivel", mas 100% transparente)
+    t0, vis, cfg_em = time.time(), False, 0.0
+    msg = wt.MSG()
+    while not sair_evt.is_set():
+        while u32.PeekMessageW(ctypes.byref(msg), None, 0, 0, 1):   # PM_REMOVE
+            u32.TranslateMessage(ctypes.byref(msg))
+            u32.DispatchMessageW(ctypes.byref(msg))
+        if time.time() - cfg_em > 0.5:                              # pega mudancas das Configuracoes
+            aplicar_cfg(); cfg_em = time.time()
         e = estado
-        mostrar = e in textos
-        if mostrar and not vis[0]:
-            hist.extend([0.0] * 20); u32.ShowWindow(hwnd, 4); vis[0] = True
-        elif not mostrar and vis[0]:
-            u32.ShowWindow(hwnd, 0); vis[0] = False
-        if vis[0]:
+        mostrar = e in textos or time.time() < atual["mostrar_ate"]
+        if mostrar:
+            if not vis:
+                hist.extend([0.0] * 20); vis = True
             hist.append(min(1.0, (nivel * 18) ** 0.7))
-            t = time.time() - t0
-            cor = CORES[e]
-            img = Image.new("RGB", (W * S, H * S), (2, 2, 2))
-            d = ImageDraw.Draw(img)
-            d.rounded_rectangle((S, S, (W - 1) * S, (H - 1) * S), radius=(H // 2) * S,
-                                fill=(20, 20, 26), outline=(58, 58, 70), width=S)
-            cy = H * S / 2
-            r = (5.5 + 1.5 * math.sin(t * 6)) * S
-            d.ellipse((26 * S - r * 1.9, cy - r * 1.9, 26 * S + r * 1.9, cy + r * 1.9), fill=tuple(c // 4 for c in cor))
-            d.ellipse((26 * S - r, cy - r, 26 * S + r, cy + r), fill=cor)
-            d.text((46 * S, cy), textos[e], font=fonte, fill=(238, 238, 244), anchor="lm")
-            n, bw, gap, x0 = 20, 3 * S, 2 * S, 142 * S
-            for i in range(n):
-                if e in ("gravando", "comando"):
-                    v = hist[i]
-                elif e == "lendo":
-                    v = 0.35 + 0.3 * math.sin(t * 7 + i * 0.6) * math.sin(t * 2.3 + i * 0.25)
-                else:
-                    v = 0.12 + 0.12 * (1 + math.sin(t * 9 - i * 0.45)) / 2
-                h = max(3 * S, v * 30 * S)
-                x = x0 + i * (bw + gap)
-                d.rounded_rectangle((x, cy - h / 2, x + bw, cy + h / 2), radius=bw // 2,
-                                    fill=(238, 238, 244) if e in ("gravando", "comando") else cor)
-            foto[0] = ImageTk.PhotoImage(img.resize((W, H), Image.LANCZOS))
-            lbl.config(image=foto[0])
-        root.after(33, tick)
-    tick()
-    root.mainloop()
+            mostrar_imagem(desenhar_quadro(e, time.time() - t0))
+        elif vis:
+            mostrar_imagem(vazio()); vis = False
+        time.sleep(0.033)
+    u32.DestroyWindow(hwnd)
 
 
 # ---------------- Teclado + gravacao ----------------
@@ -669,6 +815,12 @@ def sair(i, _):
     i.stop()
 
 
+def mostrar_pilula_para_posicionar(*_):
+    c = ler_cfg()
+    c["pilula_mostrar_ate"] = time.time() + 15      # aparece 15 s para arrastar
+    salvar_cfg(c)
+
+
 def menu_historico():
     import pystray, pyperclip
     itens = []
@@ -705,6 +857,7 @@ def main():
     menu = pystray.Menu(
         pystray.MenuItem("Configurações", abrir_config, default=True),
         pystray.MenuItem("Histórico", pystray.Menu(menu_historico)),
+        pystray.MenuItem("Posicionar pílula", mostrar_pilula_para_posicionar),
         pystray.MenuItem("Editar dicionário", lambda *_: os.startfile(DICIONARIO)),
         pystray.MenuItem("Iniciar com o Windows", alternar_iniciar, checked=inicia_com_windows),
         pystray.MenuItem("Abrir pasta", lambda *_: os.startfile(BASE)),
