@@ -1,0 +1,14 @@
+# Dados pessoais de cada usuario - NUNCA subir
+.env
+config.json
+historico.jsonl
+dicionario.txt
+*.log
+fala.mp3
+fala.txt
+
+# Gerados automaticamente
+som_*.wav
+voz_livre.ico
+__pycache__/
+*.pyc

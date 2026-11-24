@@ -1,0 +1,10 @@
+faster-whisper>=1.1
+keyboard>=0.13
+sounddevice>=0.5
+pystray>=0.19
+pillow>=10
+pyperclip>=1.8
+numpy>=1.26
+requests>=2.31
+edge-tts>=7.3
+customtkinter>=5.2
